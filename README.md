@@ -7,7 +7,7 @@ return?
 
 ## How-to
 
-Simply run with `python cap-gains.py` (requires Python 3+) and follow the
+Simply run with `python capital-gains.py` (requires Python 3+) and follow the
 interactive command line (type `?` for list of commands).
 
 ## Examples
