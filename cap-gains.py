@@ -175,7 +175,7 @@ def command_desc(fn):
     elif fn == command_new:
         return 'Add a new transaction'
     elif fn == command_acb:
-        return 'Print adjusted cost basis (ACB) for transactions.'
+        return 'Print adjusted cost base (ACB) for transactions.'
     elif fn == command_list:
         return 'List all securities and transactions.'
     elif fn == command_load:
