@@ -3,11 +3,13 @@ from __future__ import division
 import dateutil.parser
 import os
 import sys
+import signal
 from functools import total_ordering
 
 from decimal import Decimal
 
 securities = {}
+CACHEFILE = '.capital-gains.cache'
 
 def yesno_input(msg):
     action = None
@@ -156,6 +158,8 @@ def command_new():
     if yesno_input('Add transaction? (y/n): ') == 'y':
         security.add_tran(Security.Transaction(date, typ, quantity, price, fee))
         print('Updated {} with transaction.'.format(sym))
+        # Save to cache.
+        save_to_file(CACHEFILE)
     else:
         print('Did not add new transaction.'.format(sym))
 
@@ -228,6 +232,15 @@ def command_acb():
     print('Remaining quantity:', quant)
     print('Remaining ACB:', acb)
 
+
+def load_from_file(fpath):
+    global securities
+    securities = {}
+    with open(fpath, 'r') as fd:
+        for line in fd:
+            sec = Security.deserialize(line)
+            securities[sec.sym] = sec
+
 def command_load():
     fpath = None
     while fpath is None or not os.path.exists(fpath):
@@ -238,15 +251,13 @@ def command_load():
     if yesno_input('Loading from {} will erase all current data. Are you sure? (y/n): '.format(fpath))  == 'n':
         return
 
-    global securities
-    securities = {}
-    with open(fpath, 'r') as fd:
-        for line in fd:
-            sec = Security.deserialize(line)
-            securities[sec.sym] = sec
-
+    load_from_file(fpath)
     print('Load from {} complete.'.format(fpath))
     command_list()
+
+def save_to_file(fpath):
+    with open(fpath, 'w') as fd:
+        fd.write('\n'.join([sec.serialize() for sec in securities.values()]))
 
 def command_save():
     fpath = None
@@ -256,8 +267,7 @@ def command_save():
                 break
         fpath = input('File to save to: ')
 
-    with open(fpath, 'w') as fd:
-        fd.write('\n'.join([sec.serialize() for sec in securities.values()]))
+    save_to_file(fpath)
     print('Save to {} successful.'.format(fpath))
 
 def command_exit():
@@ -280,13 +290,33 @@ command_tbl = {
         'exit': command_exit,
         }
 
+def cmdloop():
+
+    while True:
+        try:
+            command = input('> ').strip()
+
+            if command not in command_tbl:
+                print('Invalid input "{}". Type ? for help.'.format(command))
+                continue
+
+            command_tbl[command]()
+        except KeyboardInterrupt:
+            print()
+            if yesno_input('Interrupt detected. Exit without saving? (y/n): ') == 'y':
+                sys.exit(1)
+            command_help()
+
 if __name__ == '__main__':
     print('Welcome to Capital Gains Calculator. Type ? for a list of commands.')
-    while True:
-        command = input('> ').strip()
 
-        if command not in command_tbl:
-            print('Invalid input "{}". Type ? for help.'.format(command))
-            continue
+    # Load from cache/previous session.
+    if os.path.exists(CACHEFILE):
+        if yesno_input('Would you like to resume from the previous session? (y/n): ') == 'y':
+            load_from_file(CACHEFILE)
+            print('Loaded state from previous session.')
+            command_list()
 
-        command_tbl[command]()
+    # loop for next input
+    cmdloop()
+
